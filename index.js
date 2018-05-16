@@ -1,11 +1,12 @@
 const config = require("./config");
 const TelegramBot = require('node-telegram-bot-api');
-const twitter = require('ntwitter'),
-      http = require('http'),
-      tweeted = {},
+const Twit = require('twit');
+const http = require('http');
+
+const tweeted = {},
       load_time = Math.round(new Date().getTime() / 1000),
       contador = 0,
-      idActual=100;
+      idActual = 100;
 
 /*
 * Telegram
@@ -29,21 +30,14 @@ if (msg.text.toString().toLowerCase().indexOf(Hola) === 0) {
 /*
 * Setup twitter api
 */
-var twit = new twitter({
-  consumer_key: config.TWITTER.consumer_key,
-  consumer_secret: config.TWITTER.consumer_secret,
-  access_token_key: config.TWITTER.access_token_key,
-  access_token_secret: config.TWITTER.access_token_secret
-});
+var T = new Twit({
+    consumer_key:         config.TWITTER.consumer_key,
+    consumer_secret:      config.TWITTER.consumer_secret,
+    access_token:         config.TWITTER.access_token_key,
+    access_token_secret:  config.TWITTER.access_token_secret,
+    timeout_ms:           60*1000,  // optional HTTP request timeout to apply to all requests.
+  })
 
-var red, blue, reset;
-red   = '\033[31m';
-blue  = '\033[34m';
-morado = '\033[35m';
-fverde = '\033[42m';
-frojo = '\033[41m';
-verde = '\033[36m';
-reset = '\033[0m';
 
 /** VARIABLES DE TIEMPO **/
 
@@ -110,24 +104,24 @@ var params =
 
                 since_id: ''
             };
+
 var contadorTweets = 0;
 
 function buscaTweets(){
 
 params.since_id = since_id;
-
-twit.search(query, params, function(e,o){
-    if(o){
-        console.log("Encontrados " + o.results.length + " tweets");     
-        for(i=0; i < o.results.length; i++){
-                //console.log(o.results[i].text + "\n"); 
-                //console.log("valor: " + valora(o.results[i].text,keyWords) + "\n");
-                valorTweet = valora(o.results[i].text,keyWords);
+  T.get('search/tweets', { q: '#generative', lang : 'es', result_type : 'recent', count: 100 }, function(err, data, response) {
+    if(data){
+        console.log("Encontrados " + data.statuses.length + " tweets");     
+        for(i=0; i < data.statuses.length; i++){
+                //console.log(data.statuses[i].text + "\n"); 
+                //console.log("valor: " + valora(data.statuses[i].text,keyWords) + "\n");
+                valorTweet = valora(data.statuses[i].text,keyWords);
                 //console.log("------------------------------------------------------------------------------------- \n");
                 contadorTweets++;
-                var nick = o.results[i].from_user;
-                var idURL = o.results[i].id_str;
-                var tweet = o.results[i].text;
+                var nick = data.statuses[i].from_user;
+                var idURL = data.statuses[i].id_str;
+                var tweet = data.statuses[i].text;
                 var enlace = tweet.indexOf("http://");
                  if(enlace!=-1){
                     //console.log("Contiene enlace\n");
@@ -142,20 +136,20 @@ twit.search(query, params, function(e,o){
                     console.log(fverde+"Hola @jreyesgs he encontrado este tweet para ti: https://twitter.com/"+nick+"/status/"+idURL+" #btv2"+reset+"\n");
                 }   
         }
-        /*//console.log(o.results); */
+        /*//console.log(data.statuses); */
 
         
-        //console.log("idBase: " + o.max_id_str+"\n");
-        //console.log("Añadidos: " + o.results.length + "\n");
+        //console.log("idBase: " + data.max_id_str+"\n");
+        //console.log("Añadidos: " + data.statuses.length + "\n");
         //console.log("Encontrados totales: " + contadorTweets + "\n");
         //console.log("Tiempo transcurrido: " + cuantoTiempo() + "\n");
-        since_id=o.max_id_str;
+        since_id=data.max_id_str;
         
     }else{
        console.log("Se ha producido un error: " + e);
     }
-    
-});
+  })
+  
 }
 
 /*
